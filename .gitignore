@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dev-dist/
+playwright-report/
+test-results/
+.vite/
+.vercel/
+public/icons/*.png
+public/starter/*
+*.local
+*.log
