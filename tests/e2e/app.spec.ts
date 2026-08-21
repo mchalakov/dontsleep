@@ -15,18 +15,19 @@ async function mockWakeLock(page: import("@playwright/test").Page, reject = fals
   }, reject);
 }
 
-test("launcher exposes separate starter and personal controls", async ({ page }) => {
+test("launcher exposes public plugins and private picture controls", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Don’t Sleep" })).toBeVisible();
-  await expect(page.getByText("Starter collection", { exact: true })).toBeVisible();
-  await expect(page.getByText("My photos", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start slideshow" })).toBeEnabled();
+  await expect(page.getByRole("heading", { name: "Choose plugins" })).toBeVisible();
+  await expect(page.getByText("Text", { exact: true })).toBeVisible();
+  await expect(page.getByText("My pictures", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start" })).toBeEnabled();
 });
 
-test("starts a protected slideshow when wake lock succeeds", async ({ page }) => {
+test("starts a protected display session when wake lock succeeds", async ({ page }) => {
   await mockWakeLock(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Start slideshow" }).click();
+  await page.getByRole("button", { name: "Start" }).click();
   await expect(page.getByText("Wake lock active")).toBeVisible();
   await expect(page.getByText("Open another display")).toBeVisible();
 });
@@ -34,7 +35,7 @@ test("starts a protected slideshow when wake lock succeeds", async ({ page }) =>
 test("blocks the protected session when wake lock fails", async ({ page }) => {
   await mockWakeLock(page, true);
   await page.goto("/");
-  await page.getByRole("button", { name: "Start slideshow" }).click();
+  await page.getByRole("button", { name: "Start" }).click();
   await expect(page.getByText("Wake lock denied for test")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Don’t Sleep" })).toBeVisible();
 });
@@ -46,9 +47,20 @@ test("imports a private photo and remembers it after reload", async ({ page }) =
     "base64"
   );
   await page.locator('input[type="file"]').setInputFiles({ name: "approved-test.png", mimeType: "image/png", buffer: onePixelPng });
-  await expect(page.getByText("1 stored only in this browser")).toBeVisible();
+  await expect(page.getByText("approved-test.png", { exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByText("1 stored only in this browser")).toBeVisible();
+  await expect(page.getByText("approved-test.png", { exact: true })).toBeVisible();
+});
+
+test("adds, persists, and removes a Text plugin message", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Add a message").fill("Remote build is still running");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByText("Remote build is still running", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Remote build is still running", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Remove Remote build is still running" }).click();
+  await expect(page.getByText("Remote build is still running", { exact: true })).toHaveCount(0);
 });
 
 test("shows the manual display path when Window Management is unavailable", async ({ page }) => {

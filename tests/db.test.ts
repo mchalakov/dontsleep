@@ -17,7 +17,11 @@ describe("local persistence", () => {
   afterEach(deleteDatabase);
 
   it("persists settings with defaults", async () => {
-    const settings = { ...DEFAULT_SETTINGS, personalEnabled: true, enabledModules: { photos: false, clock: true } };
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      enabledModules: { photos: false, clock: true, text: true },
+      textMessages: [{ id: "message-1", text: "Still working", createdAt: 10 }]
+    };
     await saveSettings(settings);
     await expect(loadSettings()).resolves.toEqual(settings);
   });

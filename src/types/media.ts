@@ -1,22 +1,3 @@
-export type StarterMediaKind = "photo" | "logo";
-
-export interface FocalPoint {
-  x: number;
-  y: number;
-}
-
-export interface StarterMediaSource {
-  id: string;
-  sourceFile: string;
-  description: string;
-  kind: StarterMediaKind;
-  focalPoint?: FocalPoint;
-}
-
-export interface StarterMedia extends StarterMediaSource {
-  src: string;
-}
-
 export interface StoredPhoto {
   id: string;
   name: string;
@@ -29,16 +10,20 @@ export interface StoredPhoto {
   createdAt: number;
 }
 
+export interface TextMessage {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
 export interface AppSettings {
   enabledModules: Record<string, boolean>;
-  starterEnabled: boolean;
-  personalEnabled: boolean;
   slideDurationMs: number;
+  textMessages: TextMessage[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  enabledModules: { photos: true, clock: true },
-  starterEnabled: true,
-  personalEnabled: false,
-  slideDurationMs: 18_000
+  enabledModules: { photos: true, clock: true, text: true },
+  slideDurationMs: 18_000,
+  textMessages: []
 };

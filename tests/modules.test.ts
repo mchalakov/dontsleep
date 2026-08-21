@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { slideModules, validateModuleRegistry } from "../src/modules/registry";
 
 describe("module registry", () => {
-  it("ships photos and clock modules", () => {
-    expect(slideModules.map((module) => module.id)).toEqual(["photos", "clock"]);
+  it("ships pictures, clock, and text modules", () => {
+    expect(slideModules.map((module) => module.id)).toEqual(["photos", "clock", "text"]);
     expect(() => validateModuleRegistry()).not.toThrow();
   });
 

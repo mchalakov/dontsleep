@@ -1,8 +1,9 @@
 import { clockModule } from "./clock";
 import { photosModule } from "./photos";
+import { textModule } from "./text";
 import type { SlideModule } from "./types";
 
-export const slideModules: SlideModule[] = [photosModule, clockModule];
+export const slideModules: SlideModule[] = [photosModule, clockModule, textModule];
 
 export function validateModuleRegistry(modules: SlideModule[] = slideModules): void {
   const ids = new Set<string>();

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { starterMedia } from "../content/starter-media";
 import { listPhotos, loadSettings } from "../lib/db";
 import { createCoordinatedDeck, type SlideDescriptor } from "../lib/scheduler";
 import { SessionChannel } from "../lib/session-channel";
@@ -57,7 +56,7 @@ export function Slideshow({
   const slides = useMemo(() => {
     const candidates = slideModules.flatMap((module) => {
       if (!settings.enabledModules[module.id]) return [];
-      return module.buildSlides({ settings, starterMedia, personalPhotos: photos, personalUrls });
+      return module.buildSlides({ settings, personalPhotos: photos, personalUrls });
     });
     return createCoordinatedDeck(candidates, seed, displayOrdinal);
   }, [displayOrdinal, personalUrls, photos, seed, settings]);
@@ -161,7 +160,7 @@ export function Slideshow({
   if (!ready) {
     return (
       <main className="activation-screen">
-        <img src="/app-mark.svg" alt="" />
+        <img src={`${import.meta.env.BASE_URL}app-mark.svg`} alt="" />
         <p className="eyebrow">Display {displayOrdinal + 1}</p>
         <h1>Activate this display</h1>
         <p>{activationError ?? "Click once to hold the wake lock and enter fullscreen."}</p>
@@ -185,7 +184,7 @@ export function Slideshow({
       ) : (
         <section className="empty-slide">
           <span>Don’t Sleep</span>
-          <strong>Add photos or enable the clock</strong>
+          <strong>Add pictures or text, or enable the clock</strong>
         </section>
       )}
 
@@ -195,7 +194,7 @@ export function Slideshow({
         </button>
       )}
 
-      <nav className="slideshow-controls" aria-label="Slideshow controls">
+      <nav className="slideshow-controls" aria-label="Session controls">
         <div className="live-state"><span className={wakeLock.state === "active" ? "active" : ""} />{wakeLock.state === "active" ? "Wake lock active" : "Wake lock inactive"}</div>
         <div className="control-actions">
           {!fullscreen && <button onClick={() => void activate()}>Enter fullscreen</button>}

@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { starterMedia } from "../content/starter-media";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   clearPhotos,
   getStorageEstimate,
@@ -56,6 +55,7 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [messageInput, setMessageInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const refreshStorage = useCallback(async () => {
@@ -87,18 +87,21 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
   const addFiles = useCallback(
     async (fileList: FileList | File[]) => {
       setError(null);
-      setNotice("Preparing photos locally…");
+      setNotice("Preparing images locally…");
       const result = await importPhotos(Array.from(fileList));
       if (result.photos.length) {
         try {
           await requestPersistentStorage();
           await savePhotos(result.photos);
           setPhotos((current) => [...result.photos, ...current]);
-          updateSettings((current) => ({ ...current, personalEnabled: true }));
-          setNotice(`${result.photos.length} photo${result.photos.length === 1 ? "" : "s"} added. Nothing was uploaded.`);
+          updateSettings((current) => ({
+            ...current,
+            enabledModules: { ...current.enabledModules, photos: true }
+          }));
+          setNotice(`${result.photos.length} image${result.photos.length === 1 ? "" : "s"} added. Nothing was uploaded.`);
           void refreshStorage();
         } catch (reason) {
-          setError(reason instanceof Error ? reason.message : "Unable to store these photos locally.");
+          setError(reason instanceof Error ? reason.message : "Unable to store these images locally.");
         }
       } else {
         setNotice(null);
@@ -132,7 +135,11 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
   };
 
   const selectedDisplays = useMemo(() => displays.filter((display) => display.selected), [displays]);
-  const canStart = !loading && Object.entries(settings.enabledModules).some(([, enabled]) => enabled);
+  const canStart =
+    !loading &&
+    (Boolean(settings.enabledModules.clock) ||
+      (Boolean(settings.enabledModules.photos) && photos.length > 0) ||
+      (Boolean(settings.enabledModules.text) && settings.textMessages.length > 0));
 
   const start = async () => {
     setError(null);
@@ -169,7 +176,7 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
     try {
       await Promise.all([controller.start(), fullscreenPromise]);
       if (secondary.length > childWindows.length) {
-        setNotice("Some display windows were blocked. Use Open another display from the slideshow controls.");
+        setNotice("Some display windows were blocked. Use Open another display from the session controls.");
       }
       onStart({
         sessionId,
@@ -201,21 +208,39 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
   };
 
   const clearAll = async () => {
-    if (!window.confirm("Remove every photo in My photos from this browser?")) return;
+    if (!window.confirm("Remove every image in My pictures from this browser?")) return;
     await clearPhotos();
     setPhotos([]);
-    updateSettings((current) => ({ ...current, personalEnabled: false }));
     void refreshStorage();
+  };
+
+  const addMessage = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const text = messageInput.trim();
+    if (!text) return;
+    updateSettings((current) => ({
+      ...current,
+      enabledModules: { ...current.enabledModules, text: true },
+      textMessages: [...current.textMessages, { id: crypto.randomUUID(), text, createdAt: Date.now() }]
+    }));
+    setMessageInput("");
+  };
+
+  const removeMessage = (id: string) => {
+    updateSettings((current) => ({
+      ...current,
+      textMessages: current.textMessages.filter((message) => message.id !== id)
+    }));
   };
 
   return (
     <main className="launcher-shell">
       <header className="hero">
-        <div className="brand-mark"><img src="/app-mark.svg" alt="" /></div>
+        <div className="brand-mark"><img src={`${import.meta.env.BASE_URL}app-mark.svg`} alt="" /></div>
         <div>
           <p className="eyebrow">Ambient wake display</p>
           <h1>Don’t Sleep</h1>
-          <p>Keep this computer awake with a visible, moving fullscreen slideshow.</p>
+          <p>Keep this computer awake with a visible, moving fullscreen display.</p>
         </div>
         {installPrompt && <button className="secondary-button install-button" onClick={install}>Install app</button>}
       </header>
@@ -223,13 +248,13 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
       <section className="launcher-grid">
         <div className="panel modules-panel">
           <div className="panel-heading">
-            <div><span>01</span><h2>Choose slides</h2></div>
-            <small>Each display gets a different sequence</small>
+            <div><span>01</span><h2>Choose plugins</h2></div>
+            <small>Mix any content you want to show</small>
           </div>
           <div className="module-list">
             {slideModules.map((module) => (
               <label className="module-row" key={module.id}>
-                <span className={`module-icon module-icon-${module.id}`}>{module.id === "photos" ? "▧" : "◷"}</span>
+                <span className={`module-icon module-icon-${module.id}`}>{{ photos: "▧", clock: "◷", text: "T" }[module.id] ?? "•"}</span>
                 <span><strong>{module.label}</strong><small>{module.description}</small></span>
                 <input
                   type="checkbox"
@@ -243,16 +268,6 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
                 />
               </label>
             ))}
-          </div>
-          <div className="source-toggles">
-            <label>
-              <span><strong>Starter collection</strong><small>{starterMedia.length ? `${starterMedia.length} approved assets` : "Awaiting approved company media"}</small></span>
-              <input type="checkbox" checked={settings.starterEnabled} onChange={(event) => updateSettings((current) => ({ ...current, starterEnabled: event.target.checked }))} />
-            </label>
-            <label>
-              <span><strong>My photos</strong><small>{photos.length} stored only in this browser</small></span>
-              <input type="checkbox" checked={settings.personalEnabled} disabled={!photos.length} onChange={(event) => updateSettings((current) => ({ ...current, personalEnabled: event.target.checked }))} />
-            </label>
           </div>
         </div>
 
@@ -280,33 +295,67 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
               ))}
             </div>
           )}
-          <p className="display-note">On other browsers, start on this display and use <strong>Open another display</strong> from the slideshow controls.</p>
+          <p className="display-note">On other browsers, start on this display and use <strong>Open another display</strong> from the session controls.</p>
         </div>
       </section>
 
-      <section className="panel library-panel">
-        <div className="panel-heading">
-          <div><span>03</span><h2>My photos</h2></div>
-          <small>{storageText}</small>
-        </div>
-        <div
-          className={`drop-zone ${dragging ? "is-dragging" : ""}`}
-          onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
-          onDragOver={(event) => event.preventDefault()}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(event) => { event.preventDefault(); setDragging(false); void addFiles(event.dataTransfer.files); }}
-        >
-          <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={(event) => event.target.files && void addFiles(event.target.files)} />
-          <span className="upload-symbol">＋</span>
-          <div><strong>Add private photos</strong><small>Drop images here or choose files. They never leave this computer.</small></div>
-          <button type="button" className="secondary-button" onClick={() => inputRef.current?.click()}>Choose photos</button>
-        </div>
-        {photos.length > 0 && (
-          <>
-            <div className="photo-grid">{photos.map((photo) => <PhotoCard key={photo.id} photo={photo} onRemove={(id) => void removeOne(id)} />)}</div>
-            <button type="button" className="text-button danger" onClick={() => void clearAll()}>Clear My photos</button>
-          </>
-        )}
+      <section className="content-grid">
+        <section className="panel messages-panel">
+          <div className="panel-heading">
+            <div><span>03</span><h2>Text messages</h2></div>
+            <small>{settings.textMessages.length} saved locally</small>
+          </div>
+          <form className="message-form" onSubmit={addMessage}>
+            <label htmlFor="message-input">Add a message</label>
+            <div>
+              <input
+                id="message-input"
+                value={messageInput}
+                maxLength={240}
+                placeholder="Keep going — the work is running"
+                onChange={(event) => setMessageInput(event.target.value)}
+              />
+              <button className="secondary-button" type="submit" disabled={!messageInput.trim()}>Add</button>
+            </div>
+          </form>
+          {settings.textMessages.length ? (
+            <div className="message-list">
+              {settings.textMessages.map((message) => (
+                <article key={message.id}>
+                  <span>{message.text}</span>
+                  <button type="button" onClick={() => removeMessage(message.id)} aria-label={`Remove ${message.text}`}>Remove</button>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-library">Add messages for the Text plugin to rotate through.</p>
+          )}
+        </section>
+
+        <section className="panel library-panel">
+          <div className="panel-heading">
+            <div><span>04</span><h2>My pictures</h2></div>
+            <small>{storageText}</small>
+          </div>
+          <div
+            className={`drop-zone ${dragging ? "is-dragging" : ""}`}
+            onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
+            onDragOver={(event) => event.preventDefault()}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(event) => { event.preventDefault(); setDragging(false); void addFiles(event.dataTransfer.files); }}
+          >
+            <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={(event) => event.target.files && void addFiles(event.target.files)} />
+            <span className="upload-symbol">＋</span>
+            <div><strong>Add private pictures</strong><small>Drop images here or choose files. They never leave this computer.</small></div>
+            <button type="button" className="secondary-button" onClick={() => inputRef.current?.click()}>Choose images</button>
+          </div>
+          {photos.length > 0 && (
+            <>
+              <div className="photo-grid">{photos.map((photo) => <PhotoCard key={photo.id} photo={photo} onRemove={(id) => void removeOne(id)} />)}</div>
+              <button type="button" className="text-button danger" onClick={() => void clearAll()}>Clear My pictures</button>
+            </>
+          )}
+        </section>
       </section>
 
       {(notice || error) && <div className={`launcher-notice ${error ? "is-error" : ""}`} role="status">{error ?? notice}</div>}
@@ -314,7 +363,7 @@ export function Launcher({ installPrompt, onStart }: LauncherProps) {
       <footer className="start-bar">
         <div><strong>Ready for an indefinite session</strong><span>Stop manually whenever you return.</span></div>
         <button className="start-button" disabled={!canStart || starting} onClick={() => void start()}>
-          <span>{starting ? "Starting…" : "Start slideshow"}</span><span className="start-arrow">↗</span>
+          <span>{starting ? "Starting…" : "Start"}</span><span className="start-arrow">↗</span>
         </button>
       </footer>
       <p className="burn-in-note">Motion and layout changes reduce static-pixel exposure, but cannot guarantee prevention of LCD image retention or OLED burn-in.</p>

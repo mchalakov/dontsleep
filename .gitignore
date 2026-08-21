@@ -6,6 +6,5 @@ test-results/
 .vite/
 .vercel/
 public/icons/*.png
-public/starter/*
 *.local
 *.log

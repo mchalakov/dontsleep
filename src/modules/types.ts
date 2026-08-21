@@ -1,10 +1,9 @@
 import type { ComponentType } from "react";
 import type { SlideDescriptor } from "../lib/scheduler";
-import type { AppSettings, StarterMedia, StoredPhoto } from "../types/media";
+import type { AppSettings, StoredPhoto } from "../types/media";
 
 export interface ModuleBuildContext {
   settings: AppSettings;
-  starterMedia: StarterMedia[];
   personalPhotos: StoredPhoto[];
   personalUrls: Map<string, string>;
 }
